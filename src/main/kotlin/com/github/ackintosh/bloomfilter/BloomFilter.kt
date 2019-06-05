@@ -3,22 +3,29 @@ package com.github.ackintosh.bloomfilter
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.util.BitSet
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 class BloomFilter(private val size: Int) {
     private val bits = BitSet(size)
     private val hash = Hash(size)
+    private val lock = ReentrantReadWriteLock()
 
     fun add(value: ByteArray) {
-        // TODO: race condition
-        for (seed in 1..3) {
-            bits.set(hash.hash(seed, value))
+        lock.write {
+            for (seed in 1..3) {
+                bits.set(hash.hash(seed, value))
+            }
         }
     }
 
     fun mightContains(value: ByteArray): Boolean {
-        for (seed in 1..3) {
-            if (!bits.get(hash.hash(seed, value))) {
-                return false
+        lock.read {
+            for (seed in 1..3) {
+                if (!bits.get(hash.hash(seed, value))) {
+                    return false
+                }
             }
         }
         return true
